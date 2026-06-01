@@ -1,15 +1,34 @@
-# ResQRoute-Project
-ResQRoute is a real-time Dynamic Vehicle Routing solution developed during the Humanovators 2.0 Hackathon for Emergency Medical Services (EMS).
+# ResQRoute - Hackathon Project
 
-The system aims to optimize ambulance routing under real-world constraints such as traffic variability, limited resources, and urgent response time requirements.
+# Problem
+Emergency Medical Services (EMS) require fast and optimized ambulance routing under dynamic conditions such as traffic and limited resources.
 
-Key objectives:
-- Real-time optimization of ambulance routes
-- Reduction of emergency response time
-- Improved decision-making using intelligent algorithms
+---
 
-The project was developed in a 24-hour intensive hackathon environment involving continuous learning, coding, and problem-solving sessions.
+# Solution
+ResQRoute is a real-time routing optimization system designed to:
+- Optimize ambulance routes dynamically
+- Reduce response time in emergencies
+- Support decision-making using intelligent algorithms
 
-In addition to the technical implementation, the experience included workshops, panel discussions, and an Entrepreneurship Bootcamp organized by Injaz Tunisia, which helped strengthen the connection between technical solutions and real-world impact.
+---
 
-This project highlights the application of algorithmic thinking, optimization techniques, and teamwork in solving a critical healthcare logistics problem.
+# Team
+Developed during Humanovators 2.0 Hackathon with my teammates:
+- Tasnim Saidi  
+- Moetez Ghouma  
+
+---
+
+# Context
+- 24-hour hackathon challenge
+- Intensive coding + workshops + discussions
+- Focus on real-world healthcare logistics constraints
+
+---
+
+# What I learned
+- Real-time optimization thinking
+- Algorithm design under constraints
+- Team collaboration under pressure
+- Translating theory into real-world systems
