@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ResQRoute — Emergency Medical Dispatch</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0A0E1A;--bg2:#111827;--bg3:#1a2235;--bg4:#1e2d45;
+  --accent:#00D4FF;--accent2:#FF6B6B;--green:#22C55E;--amber:#F59E0B;--purple:#8B5CF6;
+  --text:#F0F4FF;--text2:#94A3B8;--text3:#64748B;
+  --border:#1E3A5F;--border2:#2D4A7A;
+  --card:#111827;--input:#0F1C30;
+  --r:10px;--r2:16px;
+}
+body{font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+
+/* ─── SCREENS ─── */
+.screen{display:none;min-height:100vh;width:100%}
+.screen.active{display:flex}
+
+/* ─── ROLE SELECT ─── */
+#screen-role{flex-direction:column;align-items:center;justify-content:center;
+  background:radial-gradient(ellipse at 50% 0%,#0d2444 0%,var(--bg) 70%)}
+.logo{display:flex;align-items:center;gap:12px;margin-bottom:48px}
+.logo-icon{width:48px;height:48px;background:var(--accent);border-radius:12px;
+  display:flex;align-items:center;justify-content:center}
+.logo-icon svg{width:28px;height:28px}
+.logo-text{font-size:28px;font-weight:700;letter-spacing:-0.5px;color:var(--text)}
+.logo-text span{color:var(--accent)}
+.role-subtitle{color:var(--text2);margin-bottom:48px;font-size:15px;text-align:center}
+.role-cards{display:flex;gap:24px;flex-wrap:wrap;justify-content:center}
+.role-card{width:260px;background:var(--bg2);border:1.5px solid var(--border);border-radius:var(--r2);
+  padding:32px 24px;cursor:pointer;transition:all .3s;text-align:center;position:relative;overflow:hidden}
+.role-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  background:linear-gradient(90deg,transparent,var(--accent),transparent);opacity:0;transition:.3s}
+.role-card:hover{border-color:var(--accent);transform:translateY(-4px)}
+.role-card:hover::before{opacity:1}
+.role-card .icon{width:72px;height:72px;border-radius:20px;margin:0 auto 20px;
+  display:flex;align-items:center;justify-content:center;font-size:32px}
+.role-card h3{font-size:18px;font-weight:600;margin-bottom:8px}
+.role-card p{font-size:13px;color:var(--text2);line-height:1.6}
+.ambulance-icon{background:rgba(255,107,107,.12);border:1.5px solid rgba(255,107,107,.3)}
+.hospital-icon{background:rgba(0,212,255,.12);border:1.5px solid rgba(0,212,255,.3)}
+
+/* ─── AUTH FORMS ─── */
+#screen-driver-auth,#screen-hospital-auth{flex-direction:column;align-items:center;
+  justify-content:center;background:radial-gradient(ellipse at 50% 0%,#0d2444 0%,var(--bg) 70%)}
+.auth-box{background:var(--bg2);border:1.5px solid var(--border);border-radius:var(--r2);
+  padding:40px;width:100%;max-width:440px}
+.auth-box h2{font-size:22px;font-weight:700;margin-bottom:6px}
+.auth-box .subtitle{color:var(--text2);font-size:14px;margin-bottom:32px}
+.form-group{margin-bottom:20px}
+label{display:block;font-size:13px;color:var(--text2);margin-bottom:6px;font-weight:500}
+input,select,textarea{width:100%;background:var(--input);border:1.5px solid var(--border);
+  border-radius:var(--r);padding:12px 14px;color:var(--text);
+  font-family:'Space Grotesk',sans-serif;font-size:14px;outline:none;transition:.2s}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+select option{background:var(--bg2)}
+.btn{width:100%;padding:13px;border:none;border-radius:var(--r);
+  font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:600;cursor:pointer;transition:.2s}
+.btn-primary{background:var(--accent);color:#000}
+.btn-primary:hover{opacity:.9}
+.btn-danger{background:var(--accent2);color:#fff}
+.btn-danger:hover{opacity:.9}
+.btn-ghost{background:transparent;border:1.5px solid var(--border);
+  color:var(--text2);font-size:13px;padding:8px 16px;width:auto}
+.btn-ghost:hover{border-color:var(--text2);color:var(--text)}
+.back-link{margin-top:20px;text-align:center}
+.back-link button{background:none;border:none;color:var(--text3);cursor:pointer;
+  font-size:13px;font-family:'Space Grotesk',sans-serif}
+.back-link button:hover{color:var(--accent)}
+.tabs{display:flex;gap:0;margin-bottom:28px;border:1.5px solid var(--border);
+  border-radius:var(--r);overflow:hidden}
+.tab{flex:1;padding:10px;background:none;border:none;color:var(--text2);cursor:pointer;
+  font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:500;transition:.2s}
+.tab.active{background:var(--accent);color:#000;font-weight:600}
+.capacity-row{display:grid;grid-template-columns:1fr 80px;gap:10px;
+  margin-bottom:10px;align-items:center}
+.add-service-btn{background:rgba(0,212,255,.1);border:1.5px dashed var(--border2);
+  border-radius:var(--r);padding:10px;width:100%;color:var(--accent);cursor:pointer;
+  font-size:13px;font-family:'Space Grotesk',sans-serif;margin-top:10px;transition:.2s}
+.add-service-btn:hover{background:rgba(0,212,255,.15)}
+
+/* ─── DRIVER DASHBOARD ─── */
+#screen-driver{flex-direction:column;background:var(--bg)}
+.topbar{height:56px;background:var(--bg2);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 24px;gap:16px;position:sticky;top:0;z-index:1000}
+.topbar .logo-sm{font-size:16px;font-weight:700;color:var(--accent)}
+.topbar .user-info{margin-left:auto;display:flex;align-items:center;gap:12px;font-size:13px;color:var(--text2)}
+.status-dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.driver-body{display:grid;grid-template-columns:420px 1fr;height:calc(100vh - 56px)}
+
+/* ─── CLIENT PANEL ─── */
+.client-panel{background:var(--bg2);border-right:1px solid var(--border);
+  overflow-y:auto;display:flex;flex-direction:column}
+.panel-header{padding:20px 20px 16px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between}
+.panel-header h2{font-size:16px;font-weight:600}
+.client-list{flex:1;overflow-y:auto;padding:12px}
+.client-card{background:var(--bg3);border:1.5px solid var(--border);border-radius:var(--r);
+  padding:14px;margin-bottom:10px;cursor:pointer;transition:.2s;position:relative}
+.client-card:hover{border-color:var(--border2)}
+.client-card.urgent{border-left:3px solid var(--accent2)}
+.client-card.stable{border-left:3px solid var(--green)}
+.client-card.moderate{border-left:3px solid var(--amber)}
+.client-card-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.client-name{font-size:14px;font-weight:600}
+.score-badge{font-size:11px;font-weight:600;padding:3px 8px;border-radius:6px;
+  font-family:'DM Mono',monospace}
+.score-critical{background:rgba(255,107,107,.2);color:var(--accent2)}
+.score-moderate{background:rgba(245,158,11,.2);color:var(--amber)}
+.score-stable{background:rgba(34,197,94,.2);color:var(--green)}
+.client-detail{font-size:12px;color:var(--text2);margin-bottom:3px}
+.eta-bar{display:flex;align-items:center;gap:6px;margin-top:8px;padding-top:8px;
+  border-top:1px solid var(--border)}
+.eta-label{font-size:11px;color:var(--text3)}
+.eta-val{font-size:12px;font-weight:600;color:var(--accent);font-family:'DM Mono',monospace}
+.hospital-tag{font-size:11px;color:var(--text3);margin-left:auto}
+.add-btn{margin:12px;padding:12px;background:rgba(0,212,255,.08);
+  border:1.5px dashed var(--border2);border-radius:var(--r);color:var(--accent);
+  cursor:pointer;font-family:'Space Grotesk',sans-serif;font-size:13px;
+  font-weight:500;transition:.2s;text-align:center}
+.add-btn:hover{background:rgba(0,212,255,.14)}
+
+/* ─── MAP ─── */
+.map-panel{position:relative}
+#driver-map{width:100%;height:100%}
+.map-overlay{position:absolute;top:16px;right:16px;z-index:999;display:flex;flex-direction:column;gap:8px}
+.map-badge{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);
+  padding:8px 14px;font-size:12px;font-weight:500}
+.ai-badge{border-color:var(--accent);color:var(--accent);background:rgba(0,212,255,.08)}
+
+/* ─── MODAL ─── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);
+  z-index:2000;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--bg2);border:1.5px solid var(--border);border-radius:var(--r2);
+  width:560px;max-width:95vw;max-height:90vh;overflow-y:auto;padding:32px}
+.modal h2{font-size:18px;font-weight:700;margin-bottom:4px}
+.modal .subtitle{color:var(--text2);font-size:13px;margin-bottom:28px}
+.modal-close{float:right;background:none;border:none;color:var(--text2);cursor:pointer;font-size:20px}
+.radio-group{display:flex;flex-direction:column;gap:8px}
+.radio-opt{display:flex;align-items:center;gap:10px;padding:10px 12px;
+  background:var(--input);border:1.5px solid var(--border);border-radius:var(--r);
+  cursor:pointer;transition:.2s}
+.radio-opt:hover{border-color:var(--border2)}
+.radio-opt.selected{border-color:var(--accent);background:rgba(0,212,255,.06)}
+.radio-opt input{width:16px;height:16px;accent-color:var(--accent)}
+.radio-opt span{font-size:13px}
+.progress-bar{display:flex;gap:6px;margin-bottom:28px}
+.step-dot{flex:1;height:4px;border-radius:2px;background:var(--border)}
+.step-dot.done{background:var(--accent)}
+.step-label{font-size:12px;color:var(--text3);margin-bottom:20px}
+
+/* ─── HOSPITAL DASHBOARD ─── */
+#screen-hospital{flex-direction:column;background:var(--bg)}
+.hosp-body{display:grid;grid-template-columns:1fr 360px;height:calc(100vh - 56px);overflow:hidden}
+.incoming-panel{overflow-y:auto;padding:20px}
+.incoming-card{background:var(--bg2);border:1.5px solid var(--border);border-radius:var(--r);
+  padding:16px;margin-bottom:12px;position:relative;overflow:hidden}
+.incoming-card.urgent::before{content:'';position:absolute;left:0;top:0;bottom:0;
+  width:3px;background:var(--accent2)}
+.incoming-card.moderate::before{content:'';position:absolute;left:0;top:0;bottom:0;
+  width:3px;background:var(--amber)}
+.incoming-card.stable::before{content:'';position:absolute;left:0;top:0;bottom:0;
+  width:3px;background:var(--green)}
+.incoming-card-header{display:flex;justify-content:space-between;align-items:center;
+  margin-bottom:10px;padding-left:10px}
+.incoming-name{font-size:14px;font-weight:600}
+.incoming-info{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding-left:10px}
+.info-chip{font-size:12px}
+.info-chip span{color:var(--text2)}
+.service-panel{background:var(--bg2);border-left:1px solid var(--border);overflow-y:auto;padding:20px}
+.service-panel h2{font-size:16px;font-weight:600;margin-bottom:16px}
+.service-block{background:var(--bg3);border:1.5px solid var(--border);border-radius:var(--r);
+  padding:14px;margin-bottom:10px}
+.service-block-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.service-name{font-size:13px;font-weight:600}
+.avail-badge{font-size:11px;font-weight:600;padding:3px 8px;border-radius:6px;
+  font-family:'DM Mono',monospace}
+.avail-good{background:rgba(34,197,94,.15);color:var(--green)}
+.avail-warn{background:rgba(245,158,11,.15);color:var(--amber)}
+.avail-full{background:rgba(255,107,107,.15);color:var(--accent2)}
+.capacity-display{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.cap-bar{flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden}
+.cap-fill{height:100%;border-radius:3px;transition:.5s}
+.cap-controls{display:flex;align-items:center;gap:6px;margin-top:6px}
+.cap-controls span{font-size:12px;color:var(--text2)}
+.cap-ctrl-btn{width:28px;height:28px;border:1px solid var(--border);background:var(--bg4);
+  color:var(--text);border-radius:6px;cursor:pointer;font-size:15px;
+  display:flex;align-items:center;justify-content:center;transition:.2s}
+.cap-ctrl-btn:hover{background:var(--accent);color:#000;border-color:var(--accent)}
+.cap-num{font-family:'DM Mono',monospace;font-size:13px;font-weight:500;min-width:50px;text-align:center}
+.total-edit{display:flex;align-items:center;gap:8px;margin-top:6px}
+.total-edit input{width:60px;padding:6px 8px;font-size:13px}
+
+/* ─── NOTIFICATION ─── */
+.notification{position:fixed;bottom:24px;right:24px;background:var(--bg2);
+  border:1.5px solid var(--accent);border-radius:var(--r);padding:14px 18px;
+  font-size:13px;z-index:3000;display:none;animation:slideUp .3s ease}
+@keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+.notif-title{font-weight:600;color:var(--accent);margin-bottom:3px}
+.notif-body{color:var(--text2)}
+
+/* ─── MISC ─── */
+.signal-anim{display:inline-block;width:8px;height:8px;border-radius:50%;
+  background:var(--accent);animation:blink .7s infinite}
+@keyframes blink{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.3;transform:scale(.7)}}
+
+/* Leaflet dark mode overrides */
+.leaflet-popup-content-wrapper{background:var(--bg2);color:var(--text);border:1px solid var(--border)}
+.leaflet-popup-tip{background:var(--bg2)}
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════
+     SCREEN 1 — ROLE SELECTION
+════════════════════════════════════════════ -->
+<div class="screen active" id="screen-role">
+  <div style="width:100%;padding:20px">
+    <div class="logo" style="justify-content:center">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5">
+          <path d="M3 12h3l2-8 4 16 3-8h3"/>
+          <circle cx="20" cy="12" r="2" fill="#000" stroke="none"/>
+        </svg>
+      </div>
+      <div class="logo-text">ResQ<span>Route</span></div>
+    </div>
+    <p class="role-subtitle">Emergency Medical Dispatch &amp; Hospital Management System</p>
+    <div class="role-cards">
+      <div class="role-card" onclick="showScreen('driver-auth')">
+        <div class="icon ambulance-icon">🚑</div>
+        <h3>Ambulance Driver</h3>
+        <p>Manage patients in transit, get AI-optimized routing to the best available hospital.</p>
+        <div style="margin-top:20px;padding:10px;background:rgba(255,107,107,.07);
+          border-radius:8px;font-size:12px;color:var(--accent2)">Log in with credentials</div>
+      </div>
+      <div class="role-card" onclick="showScreen('hospital-auth')">
+        <div class="icon hospital-icon">🏥</div>
+        <h3>Hospital Administrator</h3>
+        <p>Monitor incoming patients, manage service capacity and availability in real-time.</p>
+        <div style="margin-top:20px;padding:10px;background:rgba(0,212,255,.07);
+          border-radius:8px;font-size:12px;color:var(--accent)">Sign up or log in</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     SCREEN 2 — DRIVER AUTH
+════════════════════════════════════════════ -->
+<div class="screen" id="screen-driver-auth">
+  <div class="auth-box">
+    <h2>Driver Login</h2>
+    <p class="subtitle">Enter your ambulance service credentials</p>
+    <div class="form-group">
+      <label>Username</label>
+      <input type="text" placeholder="e.g. AMB-042" id="driver-user"/>
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" placeholder="••••••••" id="driver-pass"/>
+    </div>
+    <div class="form-group">
+      <label>Unit ID</label>
+      <input type="text" placeholder="e.g. UNIT-7" value="UNIT-7" id="driver-unit"/>
+    </div>
+    <button class="btn btn-danger" onclick="loginDriver()">Access Dashboard</button>
+    <div class="back-link">
+      <button onclick="showScreen('role')">← Back to role selection</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     SCREEN 3 — HOSPITAL AUTH
+════════════════════════════════════════════ -->
+<div class="screen" id="screen-hospital-auth">
+  <div class="auth-box" style="max-width:520px">
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('login')">Login</button>
+      <button class="tab" onclick="switchTab('signup')">Register Hospital</button>
+    </div>
+
+    <!-- LOGIN TAB -->
+    <div id="tab-login">
+      <h2>Hospital Login</h2>
+      <p class="subtitle">Access your hospital dashboard</p>
+      <div class="form-group">
+        <label>Hospital ID or Email</label>
+        <input type="text" placeholder="e.g. CHU-TUNIS-001"/>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" placeholder="••••••••"/>
+      </div>
+      <button class="btn btn-primary" onclick="loginHospital()">Access Dashboard</button>
+    </div>
+
+    <!-- SIGNUP TAB -->
+    <div id="tab-signup" style="display:none">
+      <h2>Register Hospital</h2>
+      <p class="subtitle">Set up your hospital's profile and services</p>
+      <div class="form-group">
+        <label>Hospital Name</label>
+        <input type="text" id="hosp-name" placeholder="e.g. CHU La Rabta"/>
+      </div>
+      <div class="form-group">
+        <label>Address</label>
+        <input type="text" id="hosp-addr" placeholder="Full address"/>
+      </div>
+      <div class="form-group">
+        <label>Phone</label>
+        <input type="text" placeholder="+216 71 000 000"/>
+      </div>
+      <div class="form-group">
+        <label>Services &amp; Capacity (name + number of beds)</label>
+        <div class="services-list" id="services-list">
+          <div class="capacity-row">
+            <input type="text" placeholder="Service" value="Emergency"/>
+            <input type="number" placeholder="Beds" value="20" min="1"/>
+          </div>
+          <div class="capacity-row">
+            <input type="text" placeholder="Service" value="Cardiology"/>
+            <input type="number" placeholder="Beds" value="12" min="1"/>
+          </div>
+          <div class="capacity-row">
+            <input type="text" placeholder="Service" value="Neurology"/>
+            <input type="number" placeholder="Beds" value="8" min="1"/>
+          </div>
+        </div>
+        <button class="add-service-btn" onclick="addServiceRow()">+ Add Service</button>
+      </div>
+      <div class="form-group">
+        <label>Admin Password</label>
+        <input type="password" placeholder="Create password"/>
+      </div>
+      <button class="btn btn-primary" onclick="loginHospital()">Register &amp; Continue</button>
+    </div>
+
+    <div class="back-link">
+      <button onclick="showScreen('role')">← Back to role selection</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     SCREEN 4 — DRIVER DASHBOARD
+════════════════════════════════════════════ -->
+<div class="screen" id="screen-driver">
+  <div class="topbar">
+    <span class="logo-sm">ResQRoute</span>
+    <div style="width:1px;height:20px;background:var(--border)"></div>
+    <span style="font-size:12px;color:var(--text2)" id="topbar-unit">Unit UNIT-7</span>
+    <div class="user-info">
+      <div class="status-dot"></div>
+      <span>Driver: <b id="topbar-username">Driver</b></span>
+      <button class="btn-ghost btn" onclick="showScreen('role')">Logout</button>
+    </div>
+  </div>
+  <div class="driver-body">
+    <!-- LEFT: CLIENT PANEL -->
+    <div class="client-panel">
+      <div class="panel-header">
+        <h2>Active Patients</h2>
+        <span style="font-size:12px;color:var(--text2)" id="client-count">0 clients</span>
+      </div>
+      <div class="client-list" id="client-list"></div>
+      <button class="add-btn" onclick="openAddModal()">+ Add New Patient</button>
+    </div>
+    <!-- RIGHT: MAP -->
+    <div class="map-panel">
+      <div id="driver-map"></div>
+      <div class="map-overlay">
+        <div class="map-badge ai-badge">
+          <span class="signal-anim"></span> AI Routing Active
+        </div>
+        <div class="map-badge" id="map-speed">Speed: 0 km/h</div>
+        <div class="map-badge" id="map-time">ETA: –</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     SCREEN 5 — HOSPITAL DASHBOARD
+════════════════════════════════════════════ -->
+<div class="screen" id="screen-hospital">
+  <div class="topbar">
+    <span class="logo-sm">ResQRoute</span>
+    <div style="width:1px;height:20px;background:var(--border)"></div>
+    <span style="font-size:12px;color:var(--text2)" id="hosp-topbar-name">CHU La Rabta</span>
+    <div class="user-info">
+      <div class="status-dot"></div>
+      <span style="font-size:12px;color:var(--green)">Receiving</span>
+      <button class="btn-ghost btn" onclick="showScreen('role')">Logout</button>
+    </div>
+  </div>
+  <div class="hosp-body">
+    <!-- LEFT: INCOMING PATIENTS -->
+    <div class="incoming-panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <h2>Incoming Patients</h2>
+        <span style="font-size:12px;color:var(--text2)">
+          <span class="signal-anim"></span> Live feed
+        </span>
+      </div>
+      <div id="incoming-list"></div>
+    </div>
+    <!-- RIGHT: SERVICE AVAILABILITY -->
+    <div class="service-panel">
+      <h2>Service Availability</h2>
+      <div id="service-blocks"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     MODAL — ADD PATIENT (7-STEP FORM)
+════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-add">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <h2>Add New Patient</h2>
+    <p class="subtitle">Complete all fields to register the patient and get AI routing</p>
+    <div class="progress-bar" id="progress-bar"></div>
+    <p class="step-label" id="step-label">Step 1 of 7</p>
+    <div id="modal-questions"></div>
+    <div style="display:flex;gap:10px;margin-top:24px">
+      <button class="btn btn-ghost" id="btn-prev" onclick="prevStep()" style="display:none">← Back</button>
+      <button class="btn btn-primary" id="btn-next" onclick="nextStep()" style="flex:1">Next →</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST NOTIFICATION -->
+<div class="notification" id="notification">
+  <div class="notif-title" id="notif-title"></div>
+  <div class="notif-body" id="notif-body"></div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     JAVASCRIPT
+════════════════════════════════════════════ -->
+<script>
+// ─── STATE ───────────────────────────────────
+let clients = [];
+let driverMap = null;
+let driverMarker = null;
+let clientMarkers = [];
+let routeLines = [];
+let driverPos = [36.8065, 10.1815]; // Default: Tunis center
+let driverUnitId = 'UNIT-7';
+
+// Hospital services state
+let hospitalServices = [
+  { name: 'Emergency',    total: 20, available: 5  },
+  { name: 'Cardiology',   total: 12, available: 8  },
+  { name: 'Neurology',    total: 8,  available: 2  },
+  { name: 'ICU',          total: 6,  available: 1  },
+  { name: 'General Ward', total: 30, available: 14 }
+];
+let incomingPatients = [];
+
+// Modal state
+let currentStep = 0;
+const TOTAL_STEPS = 7;
+let currentAnswers = {};
+
+// Severity scoring weights per answer index
+const severityScores = {
+  consciousness: { 0: 0, 1: 2, 2: 4, 3: 6 },
+  breathing:     { 0: 0, 1: 2, 2: 4, 3: 8 },
+  pulse:         { 0: 0, 1: 2, 2: 2, 3: 8 },
+  bleed:         { 0: 0, 1: 1, 2: 3, 3: 5 }
+};
+
+// 7 patient assessment questions
+const questions = [
+  {
+    id: 'age', label: 'Patient Age Group', type: 'radio',
+    options: ['< 18 (Minor)', '18–40 (Adult)', '41–65 (Senior Adult)', '> 65 (Elderly)']
+  },
+  {
+    id: 'consciousness', label: 'Level of Consciousness', type: 'radio',
+    options: ['Fully conscious', 'Confused / disoriented', 'Responds only to pain', 'Unconscious']
+  },
+  {
+    id: 'breathing', label: 'Breathing Status', type: 'radio',
+    options: ['Normal breathing', 'Labored / rapid', 'Very shallow', 'Not breathing']
+  },
+  {
+    id: 'pulse', label: 'Pulse / Heart Rate', type: 'radio',
+    options: ['Normal (60–100 bpm)', 'Rapid (> 100 bpm)', 'Slow (< 60 bpm)', 'No pulse detected']
+  },
+  {
+    id: 'injury', label: 'Primary Injury / Condition', type: 'radio',
+    options: ['Trauma / Accident', 'Cardiac event', 'Stroke symptoms', 'Respiratory distress', 'Other medical']
+  },
+  {
+    id: 'bleed', label: 'Bleeding / Hemorrhage', type: 'radio',
+    options: ['No bleeding', 'Minor external bleeding', 'Major external bleeding', 'Suspected internal bleeding']
+  },
+  {
+    id: 'info', label: 'Patient Name & Pickup Location', type: 'text',
+    fields: [
+      { id: 'patient_name', placeholder: 'Full name (if known)' },
+      { id: 'patient_addr', placeholder: 'Pickup address / location' }
+    ]
+  }
+];
+
+const injuryLabels = ['Trauma / Accident', 'Cardiac event', 'Stroke symptoms', 'Respiratory distress', 'Other medical'];
+const hospitalNames = ['CHU La Rabta', 'Hôpital Charles Nicolle', 'Hôpital Habib Thameur', 'Clinique de la Soukra'];
+
+// ─── SCORING ─────────────────────────────────
+function calcScore(ans) {
+  let s = 0;
+  Object.keys(severityScores).forEach(k => {
+    if (ans[k] !== undefined) s += (severityScores[k][ans[k]] || 0);
+  });
+  return Math.min(s, 20);
+}
+
+function scoreLabel(s) {
+  if (s >= 14) return { label: 'Critical', cls: 'score-critical', cardcls: 'urgent' };
+  if (s >= 7)  return { label: 'Moderate', cls: 'score-moderate', cardcls: 'moderate' };
+  return { label: 'Stable', cls: 'score-stable', cardcls: 'stable' };
+}
+
+// ─── NAVIGATION ──────────────────────────────
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+  if (id === 'driver')   initDriverMap();
+  if (id === 'hospital') initHospitalDash();
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach((t, i) =>
+    t.classList.toggle('active', i === (tab === 'login' ? 0 : 1)));
+  document.getElementById('tab-login').style.display   = tab === 'login'  ? 'block' : 'none';
+  document.getElementById('tab-signup').style.display  = tab === 'signup' ? 'block' : 'none';
+}
+
+// ─── AUTH ─────────────────────────────────────
+function loginDriver() {
+  const u = document.getElementById('driver-user').value.trim();
+  const p = document.getElementById('driver-pass').value.trim();
+  if (!u || !p) { showNotif('Login Failed', 'Please enter username and password'); return; }
+  driverUnitId = document.getElementById('driver-unit').value || 'UNIT-7';
+  document.getElementById('topbar-username').textContent = u;
+  document.getElementById('topbar-unit').textContent = 'Unit ' + driverUnitId;
+  showScreen('driver');
+}
+
+function loginHospital() {
+  const name = document.getElementById('hosp-name') ?
+    document.getElementById('hosp-name').value || 'CHU La Rabta' : 'CHU La Rabta';
+  document.getElementById('hosp-topbar-name').textContent = name;
+  showScreen('hospital');
+}
+
+function addServiceRow() {
+  const sl = document.getElementById('services-list');
+  const row = document.createElement('div');
+  row.className = 'capacity-row';
+  row.innerHTML = '<input type="text" placeholder="Service name"/><input type="number" placeholder="Beds" value="10" min="1"/>';
+  sl.appendChild(row);
+}
+
+// ─── DRIVER MAP ──────────────────────────────
+function initDriverMap() {
+  if (driverMap) return;
+  setTimeout(() => {
+    // Try to get real geolocation, fall back to Tunis
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(pos => {
+        driverPos = [pos.coords.latitude, pos.coords.longitude];
+        driverMarker.setLatLng(driverPos);
+        driverMap.setView(driverPos, 14);
+      });
+    }
+
+    driverMap = L.map('driver-map', { zoomControl: true }).setView(driverPos, 14);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com">CARTO</a>',
+      subdomains: 'abcd', maxZoom: 19
+    }).addTo(driverMap);
+
+    const dIcon = L.divIcon({
+      className: '',
+      html: `<div style="width:38px;height:38px;background:#FF6B6B;border-radius:50%;border:3px solid white;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 0 0 6px rgba(255,107,107,.25)">🚑</div>`,
+      iconSize: [38, 38], iconAnchor: [19, 19]
+    });
+    driverMarker = L.marker(driverPos, { icon: dIcon }).addTo(driverMap)
+      .bindPopup('<b>Your Position</b><br>' + driverUnitId);
+
+    document.getElementById('map-speed').textContent = 'Speed: 42 km/h';
+    document.getElementById('map-time').textContent = 'ETA: 8 min';
+
+    renderClientList();
+    simulateMovement();
+  }, 300);
+}
+
+function simulateMovement() {
+  setInterval(() => {
+    driverPos[0] += (Math.random() - 0.5) * 0.0008;
+    driverPos[1] += (Math.random() - 0.5) * 0.0008;
+    if (driverMarker) driverMarker.setLatLng(driverPos);
+  }, 3000);
+}
+
+// ─── CLIENT LIST RENDERING ───────────────────
+function renderClientList() {
+  const list  = document.getElementById('client-list');
+  const count = document.getElementById('client-count');
+  if (!list) return;
+
+  count.textContent = clients.length + ' client' + (clients.length !== 1 ? 's' : '');
+
+  if (clients.length === 0) {
+    list.innerHTML = `<div style="text-align:center;padding:48px 20px;color:var(--text3);font-size:13px;line-height:2">
+      No active patients.<br>Tap "Add New Patient" to register one.</div>`;
+    return;
+  }
+
+  list.innerHTML = clients.map((c, i) => {
+    const sc     = scoreLabel(c.score);
+    const hosp   = hospitalNames[i % hospitalNames.length];
+    const etamin = c.eta || Math.round(5 + Math.random() * 20);
+    return `<div class="client-card ${sc.cardcls}" onclick="focusClient(${i})">
+      <div class="client-card-top">
+        <span class="client-name">${c.name || 'Unknown Patient'}</span>
+        <span class="score-badge ${sc.cls}">Score ${c.score}/20 · ${sc.label}</span>
+      </div>
+      <div class="client-detail">📍 ${c.addr || 'Location not specified'}</div>
+      <div class="client-detail">🩺 ${c.injury_label || 'General emergency'}</div>
+      <div class="eta-bar">
+        <span class="eta-label">AI Route →</span>
+        <span class="eta-val">${etamin} min</span>
+        <span class="hospital-tag">${hosp}</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  updateMapMarkers();
+}
+
+function updateMapMarkers() {
+  if (!driverMap) return;
+  // Clear old markers & routes
+  clientMarkers.forEach(m => driverMap.removeLayer(m));
+  routeLines.forEach(l => driverMap.removeLayer(l));
+  clientMarkers = [];
+  routeLines = [];
+
+  clients.forEach((c, i) => {
+    const lat = driverPos[0] + (Math.random() - 0.5) * 0.04;
+    const lng = driverPos[1] + (Math.random() - 0.5) * 0.04;
+    c.mapPos = [lat, lng];
+
+    const sc    = scoreLabel(c.score);
+    const color = sc.cardcls === 'urgent' ? '#FF6B6B' : sc.cardcls === 'moderate' ? '#F59E0B' : '#22C55E';
+
+    const icon = L.divIcon({
+      className: '',
+      html: `<div style="padding:4px 10px;background:${color};color:#000;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.5)">${c.name || 'Patient ' + (i+1)}</div>`,
+      iconAnchor: [0, 0]
+    });
+    const m = L.marker([lat, lng], { icon }).addTo(driverMap);
+    m.bindPopup(`<b>${c.name || 'Patient ' + (i+1)}</b><br>Score: ${c.score}/20<br>${c.addr || '–'}`);
+    clientMarkers.push(m);
+
+    // Draw dashed AI route line from driver to first patient
+    if (i === 0) {
+      const line = L.polyline([driverPos, [lat, lng]], {
+        color: color, weight: 3, dashArray: '8 6', opacity: 0.8
+      }).addTo(driverMap);
+      routeLines.push(line);
+    }
+  });
+}
+
+function focusClient(i) {
+  if (!driverMap || !clients[i] || !clients[i].mapPos) return;
+  driverMap.setView(clients[i].mapPos, 15);
+}
+
+// ─── ADD PATIENT MODAL ───────────────────────
+function openAddModal() {
+  currentStep    = 0;
+  currentAnswers = {};
+  renderStep();
+  document.getElementById('modal-add').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modal-add').classList.remove('open');
+}
+
+function renderStep() {
+  const q = questions[currentStep];
+
+  // Progress bar
+  document.getElementById('progress-bar').innerHTML =
+    questions.map((_, i) => `<div class="step-dot${i <= currentStep ? ' done' : ''}"></div>`).join('');
+
+  document.getElementById('step-label').textContent = `Question ${currentStep + 1} of ${TOTAL_STEPS}`;
+  document.getElementById('btn-prev').style.display = currentStep > 0 ? 'inline-flex' : 'none';
+  document.getElementById('btn-next').textContent   = currentStep === TOTAL_STEPS - 1 ? 'Add Patient ✓' : 'Next →';
+
+  let html = `<label style="font-size:15px;font-weight:600;display:block;margin-bottom:16px">${q.label}</label>`;
+
+  if (q.type === 'radio') {
+    html += '<div class="radio-group">' +
+      q.options.map((opt, oi) => `
+        <div class="radio-opt${currentAnswers[q.id] === oi ? ' selected' : ''}"
+          onclick="selectRadio('${q.id}', ${oi}, this)">
+          <input type="radio" name="${q.id}" ${currentAnswers[q.id] === oi ? 'checked' : ''}/>
+          <span>${opt}</span>
+        </div>`).join('') + '</div>';
+  } else {
+    html += q.fields.map(f => `
+      <div class="form-group">
+        <input type="text" id="field-${f.id}" placeholder="${f.placeholder}"
+          value="${currentAnswers[f.id] || ''}"
+          oninput="currentAnswers['${f.id}'] = this.value"
+          style="margin-bottom:12px"/>
+      </div>`).join('');
+  }
+
+  document.getElementById('modal-questions').innerHTML = html;
+}
+
+function selectRadio(qid, idx, el) {
+  currentAnswers[qid] = idx;
+  document.querySelectorAll('.radio-opt').forEach(r => r.classList.remove('selected'));
+  el.classList.add('selected');
+  el.querySelector('input').checked = true;
+}
+
+function nextStep() {
+  const q = questions[currentStep];
+  if (q.type === 'radio' && currentAnswers[q.id] === undefined) {
+    showNotif('Required', 'Please select an option before continuing');
+    return;
+  }
+  if (currentStep === TOTAL_STEPS - 1) { submitClient(); return; }
+  currentStep++;
+  renderStep();
+}
+
+function prevStep() {
+  if (currentStep > 0) { currentStep--; renderStep(); }
+}
+
+function submitClient() {
+  const score = calcScore(currentAnswers);
+  const client = {
+    name:         currentAnswers.patient_name  || 'Unknown Patient',
+    addr:         currentAnswers.patient_addr  || 'Unknown location',
+    score,
+    injury_label: currentAnswers.injury !== undefined ? injuryLabels[currentAnswers.injury] : 'General emergency',
+    answers:      { ...currentAnswers },
+    time:         new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+    eta:          Math.round(5 + Math.random() * 20)
+  };
+  clients.push(client);
+  closeModal();
+  renderClientList();
+
+  const sc = scoreLabel(score);
+  showNotif('Patient Added', `AI routing assigned — Score: ${score}/20 (${sc.label})`);
+
+  // Sync to hospital incoming queue
+  simulateHospitalIncoming(client, score);
+}
+
+// ─── HOSPITAL DASHBOARD ──────────────────────
+function initHospitalDash() {
+  if (incomingPatients.length === 0) {
+    incomingPatients = [
+      { name: 'Mohamed Ali',    score: 16, service: 'Emergency',    eta: 4,  condition: 'Cardiac event',     unit: 'UNIT-3' },
+      { name: 'Fatma Belhaj',   score: 9,  service: 'Neurology',    eta: 12, condition: 'Stroke symptoms',   unit: 'UNIT-1' },
+      { name: 'Khaled Mansour', score: 3,  service: 'General Ward', eta: 22, condition: 'Mild trauma',       unit: 'UNIT-5' },
+    ];
+  }
+  renderIncoming();
+  renderServices();
+
+  // Countdown ETAs every minute
+  setInterval(() => {
+    incomingPatients.forEach(p => { if (p.eta > 0) p.eta--; });
+    renderIncoming();
+  }, 60000);
+}
+
+function renderIncoming() {
+  const list = document.getElementById('incoming-list');
+  if (!list) return;
+  if (incomingPatients.length === 0) {
+    list.innerHTML = `<div style="text-align:center;padding:48px 20px;color:var(--text3);font-size:13px">
+      No incoming patients at this time.</div>`;
+    return;
+  }
+  list.innerHTML = incomingPatients.map((p, i) => {
+    const sc = scoreLabel(p.score);
+    return `<div class="incoming-card ${sc.cardcls}">
+      <div class="incoming-card-header">
+        <span class="incoming-name">${p.name}</span>
+        <span class="score-badge ${sc.cls}">Score ${p.score}/20 · ${sc.label}</span>
+      </div>
+      <div class="incoming-info">
+        <div class="info-chip"><span>Unit </span>${p.unit}</div>
+        <div class="info-chip"><span>ETA </span><b style="color:var(--accent)">${p.eta} min</b></div>
+        <div class="info-chip"><span>Condition </span>${p.condition}</div>
+        <div class="info-chip"><span>Service </span>${p.service}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderServices() {
+  const cont = document.getElementById('service-blocks');
+  if (!cont) return;
+  cont.innerHTML = hospitalServices.map((s, i) => {
+    const pct       = ((s.total - s.available) / s.total) * 100;
+    const fillColor = s.available === 0 ? '#FF6B6B' : s.available <= s.total * 0.2 ? '#F59E0B' : '#22C55E';
+    const badgeCls  = s.available === 0 ? 'avail-full' : s.available <= s.total * 0.2 ? 'avail-warn' : 'avail-good';
+    const badgeText = s.available === 0 ? 'FULL' : `${s.available} free`;
+    return `<div class="service-block">
+      <div class="service-block-header">
+        <span class="service-name">${s.name}</span>
+        <span class="avail-badge ${badgeCls}">${badgeText}</span>
+      </div>
+      <div class="capacity-display">
+        <div class="cap-bar">
+          <div class="cap-fill" style="width:${pct.toFixed(1)}%;background:${fillColor}"></div>
+        </div>
+        <span style="font-size:12px;color:var(--text2);min-width:60px">${s.total - s.available}/${s.total}</span>
+      </div>
+      <div class="cap-controls">
+        <span>Available:</span>
+        <button class="cap-ctrl-btn" onclick="adjustAvail(${i}, -1)">−</button>
+        <span class="cap-num">${s.available}</span>
+        <button class="cap-ctrl-btn" onclick="adjustAvail(${i}, +1)">+</button>
+      </div>
+      <div class="total-edit">
+        <span style="font-size:12px;color:var(--text3)">Total beds:</span>
+        <input type="number" value="${s.total}" min="1"
+          style="width:64px;padding:6px 8px;font-size:13px"
+          onchange="setTotal(${i}, this.value)"/>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function adjustAvail(i, d) {
+  const s = hospitalServices[i];
+  s.available = Math.max(0, Math.min(s.total, s.available + d));
+  renderServices();
+}
+
+function setTotal(i, v) {
+  const s = hospitalServices[i];
+  s.total     = Math.max(1, parseInt(v) || 1);
+  s.available = Math.min(s.available, s.total);
+  renderServices();
+}
+
+function simulateHospitalIncoming(client, score) {
+  const svcs = ['Emergency', 'Cardiology', 'Neurology', 'General Ward'];
+  incomingPatients.unshift({
+    name:      client.name,
+    score,
+    service:   score >= 14 ? 'Emergency' : score >= 7 ? svcs[1 + Math.floor(Math.random() * 2)] : 'General Ward',
+    eta:       client.eta,
+    condition: client.injury_label,
+    unit:      driverUnitId
+  });
+  renderIncoming();
+}
+
+// ─── NOTIFICATIONS ────────────────────────────
+function showNotif(title, body) {
+  const n = document.getElementById('notification');
+  document.getElementById('notif-title').textContent = title;
+  document.getElementById('notif-body').textContent  = body;
+  n.style.display = 'block';
+  setTimeout(() => n.style.display = 'none', 4500);
+}
+</script>
+</body>
+</html>
